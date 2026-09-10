@@ -9,7 +9,7 @@ pipeline {
     }
 
     parameters {
-        string(name: 'NOTIFY_EMAIL', defaultValue: '', description: 'Your email address for the two stage notifications.')
+        string(name: 'NOTIFY_EMAIL', defaultValue: '$DEFAULT_RECIPIENTS', description: 'Use the Jenkins email settings, or enter a recipient address.')
     }
 
     triggers {

@@ -12,3 +12,8 @@ npm-debug.log
 .idea/
 .dccache
 
+# Files generated while demonstrating the Jenkins assignment.
+logs/
+coverage/
+.env
+.env.*
