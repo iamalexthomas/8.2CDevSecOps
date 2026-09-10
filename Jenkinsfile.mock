@@ -1,0 +1,51 @@
+// Part 1 Task 1: the seven stages only print the task and possible tools.
+pipeline {
+    agent any
+
+    options {
+        skipDefaultCheckout(true)
+        disableConcurrentBuilds()
+    }
+
+    triggers {
+        pollSCM('* * * * *')
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                echo 'Task: Compile and package the code. Tool: Apache Maven.'
+            }
+        }
+        stage('Unit and Integration Tests') {
+            steps {
+                echo 'Task: Test individual methods and check that components work together. Tools: JUnit and Maven Surefire/Failsafe.'
+            }
+        }
+        stage('Code Analysis') {
+            steps {
+                echo 'Task: Check source code for bugs, code smells and coding rule violations. Tool: SonarQube with the Jenkins scanner plugin.'
+            }
+        }
+        stage('Security Scan') {
+            steps {
+                echo 'Task: Check project dependencies for known vulnerabilities. Tool: OWASP Dependency-Check with its Jenkins plugin.'
+            }
+        }
+        stage('Deploy to Staging') {
+            steps {
+                echo 'Task: Copy the application package to a staging server. Tools: Ansible and an AWS EC2 staging instance.'
+            }
+        }
+        stage('Integration Tests on Staging') {
+            steps {
+                echo 'Task: Test application APIs and connected services in the staging environment. Tools: Postman collections and Newman.'
+            }
+        }
+        stage('Deploy to Production') {
+            steps {
+                echo 'Task: Release the checked application package to the production server. Tools: Ansible and an AWS EC2 production instance.'
+            }
+        }
+    }
+}

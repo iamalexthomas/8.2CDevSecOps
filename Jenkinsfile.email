@@ -1,0 +1,108 @@
+// Part 2 Task 2: Email Extension notifications after tests and security scanning.
+pipeline {
+    agent any
+
+    options {
+        skipDefaultCheckout(true)
+        disableConcurrentBuilds()
+        timeout(time: 20, unit: 'MINUTES')
+    }
+
+    parameters {
+        string(name: 'NOTIFY_EMAIL', defaultValue: '', description: 'Your email address for the two stage notifications.')
+    }
+
+    triggers {
+        pollSCM('* * * * *')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    if (!params.NOTIFY_EMAIL?.trim()) {
+                        error('Enter NOTIFY_EMAIL using Build with Parameters before running this job.')
+                    }
+                }
+                echo 'Tool: Git. Download the main branch from GitHub.'
+                git branch: 'main', url: 'https://github.com/iamalexthomas/8.2CDevSecOps.git'
+                sh 'mkdir -p logs'
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                echo 'Tool: npm. Install the project dependencies.'
+                sh 'npm install'
+            }
+        }
+        stage('Run Tests') {
+            steps {
+                echo 'Tools: npm and Snyk. Run the test command provided by nodejs-goof.'
+                script {
+                    int result = sh(script: 'npm test > logs/tests.log 2>&1', returnStatus: true)
+                    sh 'cat logs/tests.log'
+                    env.TEST_STATUS = result == 0 ? 'SUCCESS' : 'FAILURE'
+                    env.TEST_EXIT = result.toString()
+                    if (result != 0) {
+                        // Keep the demo running, but mark this stage as failed.
+                        catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                            error("Test command failed with exit code ${result}. See tests.log.")
+                        }
+                    }
+                }
+            }
+            post {
+                always {
+                    emailext(
+                        to: params.NOTIFY_EMAIL,
+                        subject: "${env.JOB_NAME} #${env.BUILD_NUMBER}: Run Tests - ${env.TEST_STATUS ?: 'FAILURE'}",
+                        body: "Run Tests status: ${env.TEST_STATUS ?: 'FAILURE'}\nCommand: npm test\nExit code: ${env.TEST_EXIT ?: 'not available'}\nBuild: ${env.BUILD_URL}\nThe upstream test script invokes Snyk. A failed command is not a passed test. The demonstration continues so the scan can run.",
+                        attachmentsPattern: 'logs/tests.log',
+                        attachLog: true,
+                        compressLog: false
+                    )
+                }
+            }
+        }
+        stage('Generate Coverage Report') {
+            steps {
+                echo 'Tool: npm script runner. The supplied project currently has no coverage script; its error is retained in the console.'
+                sh 'npm run coverage || true'
+            }
+        }
+        stage('NPM Audit (Security Scan)') {
+            steps {
+                echo 'Tool: npm audit. Check dependencies against known security advisories.'
+                script {
+                    int result = sh(script: 'npm audit > logs/npm-audit.log 2>&1', returnStatus: true)
+                    sh 'cat logs/npm-audit.log'
+                    env.AUDIT_STATUS = result == 0 ? 'SUCCESS' : 'FAILURE'
+                    env.AUDIT_EXIT = result.toString()
+                    if (result != 0) {
+                        catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                            error("Audit command returned ${result}. Check the report for vulnerabilities or a scan error.")
+                        }
+                    }
+                }
+            }
+            post {
+                always {
+                    emailext(
+                        to: params.NOTIFY_EMAIL,
+                        subject: "${env.JOB_NAME} #${env.BUILD_NUMBER}: NPM Audit - ${env.AUDIT_STATUS ?: 'FAILURE'}",
+                        body: "NPM Audit status: ${env.AUDIT_STATUS ?: 'FAILURE'}\nCommand: npm audit\nExit code: ${env.AUDIT_EXIT ?: 'not available'}\nBuild: ${env.BUILD_URL}\nA non-zero result can mean vulnerabilities or a scan error. Read the attached report. A completed demonstration pipeline does not mean the application is secure.",
+                        attachmentsPattern: 'logs/npm-audit.log',
+                        attachLog: true,
+                        compressLog: false
+                    )
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'logs/*.log', allowEmptyArchive: true
+        }
+    }
+}
