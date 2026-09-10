@@ -17,9 +17,3 @@ logs/
 coverage/
 .env
 .env.*
-
-# Local SonarScanner files and generated reports
-.sonar-tools/
-.scannerwork/
-sonar-results/
-sonar-token.txt
