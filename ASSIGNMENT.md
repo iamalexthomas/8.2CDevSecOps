@@ -1,6 +1,6 @@
 # SIT753 7.1C - Jenkins and DevSecOps
 
-This repository contains the supplied `snyk-labs/nodejs-goof` application and three Jenkins pipeline scripts. The application is intentionally vulnerable. It is used here for a security scanning exercise.
+This repository contains the supplied `snyk-labs/nodejs-goof` application and the Jenkins pipeline scripts. The application is intentionally vulnerable. It is used here for a security scanning exercise.
 
 ## Pipeline files
 
@@ -8,9 +8,11 @@ This repository contains the supplied `snyk-labs/nodejs-goof` application and th
 | --- | --- | --- |
 | `Jenkinsfile.mock` | Part 1 Task 1 | Prints seven stages, their tasks and suitable tools. |
 | `Jenkinsfile` | Part 1 Task 2 | Checks out the project, installs dependencies, runs the supplied test and coverage commands, and runs npm audit. |
-| `Jenkinsfile.email` | Part 2 Task 2 | Adds an email with the status and logs after the test and security scan stages. |
+| `Jenkinsfile.sonarcloud` | Part 2 Task 1 | Keeps the five npm stages and adds source-code analysis with SonarCloud. |
+| `sonar-project.properties` | SonarCloud setup | Defines the project, organization, sources, exclusions and optional LCOV report path. |
+| `sonar-results.py` | Scan results | Waits for processing and prints the actual API responses and findings. |
 
-The selected Part 2 option is **Email Notification**. No SonarCloud extension is required. Naming SonarQube as a possible tool in the mock pipeline does not mean the SonarCloud option has also been completed.
+The selected Part 2 option is **SonarCloud.io** (now called SonarQube Cloud). The previous email job is retired. Only the SonarCloud extension is used for the third video.
 
 ## Part 1 Task 1: stages and tools
 
@@ -48,32 +50,38 @@ The upstream revision used for this exercise is `add14ba59e98240d9e00a235dd7d42c
 
 `npm audit` is a form of Software Composition Analysis (SCA). It checks dependencies; it is not a complete scan of the application's source code or running website. A finding should be reviewed using its package name, severity, affected version range and advisory link. Vulnerability totals can change as the registry adds advisories.
 
-## Part 2: email notifications
+## Part 2: SonarCloud analysis
 
-The email pipeline uses Jenkins **Email Extension** and an SMTP server configured under **Manage Jenkins > System > Extended E-mail Notification**. Enter the recipient in the `NOTIFY_EMAIL` build parameter.
+`Jenkinsfile.sonarcloud` keeps the five stages from Part 1 Task 2 and adds **SonarCloud Analysis**. It downloads the Linux SonarScanner CLI ZIP from SonarSource, extracts it and runs the scanner from the repository folder. Git, npm, curl, unzip, Python 3 and the scanner are the tools used in this pipeline.
 
-This local setup uses Mailpit as the SMTP server at `127.0.0.1:1025`, with an inbox at `http://localhost:8025`. The recipient is stored in Jenkins rather than in this public repository. The default parameter `$DEFAULT_RECIPIENTS` uses that configured address. Jenkins sends real SMTP messages to this test inbox, where their bodies and attachments can be opened. Mailpit captures the messages locally even if they are addressed to a Gmail account. This does not deliver them to Gmail or Outlook. An external inbox would require its provider's SMTP settings and credentials in Jenkins.
+Create a SonarCloud project bound to this GitHub repository and copy its exact project key and organization key into `sonar-project.properties`. Disable SonarCloud Automatic Analysis for this project because Jenkins performs the analysis. The free plan's main-branch analysis is sufficient for this exercise.
 
-It sends one message after `Run Tests` and one after `NPM Audit (Security Scan)`. Each message contains the job name, build number, stage result, command exit code and build URL. It attaches the relevant stage log and the current Jenkins console log. Stage logs are also saved as build artifacts.
+Save the generated token in a private local text file outside this repository, then add it to Jenkins as **Secret text**, with ID **SONAR_TOKEN**. The task sheet calls this "Secret key". The `withCredentials` block makes the secret available only to the analysis stage. SonarScanner reads the environment variable directly; no actual token belongs in the properties file or GitHub.
 
-The script uses `returnStatus: true` to keep the real command exit code. If the command fails, `catchError` marks the stage as failed and allows the demonstration pipeline to continue. The overall build can finish successfully while a stage has failed. The email reports that failure, and the attached log explains whether it was a vulnerability finding or an execution error. This is a demonstration choice that follows the task sheet's continue-on-error behaviour. A real release should use suitable failure rules before deployment.
+The properties file sets the LCOV path to `coverage/lcov.info`. The supplied application has no coverage script, so that report is currently absent. SonarCloud can still analyse the source code; an absent report does not establish test coverage.
+
+After the upload, `sonar-results.py` waits for the server to finish processing the task. It prints real HTTP response codes, the quality gate, available measures and the first 20 unresolved issues, and saves the JSON responses as Jenkins artifacts. HTTP 200 means the API request succeeded. The separate processing status must be SUCCESS before the returned results can be treated as this completed analysis. A quality gate failure is a finding, not an upload failure.
+
+SonarCloud performs Static Application Security Testing (SAST) and code quality checks. This complements npm audit, which checks dependency vulnerabilities. Show an actual finding, its source location and the analysis time in the video. Do not invent findings or say the application is safe because Jenkins finished successfully.
 
 ## Connection to the notes
 
-Security checks happen during the pipeline, which gives earlier feedback. This is the main DevSecOps idea used here. Developers, testers, operations staff and security staff share responsibility for responding to problems. Git records changes, Jenkins repeats the checks, and email makes the results easier to notice.
+Security checks happen during the pipeline, which gives earlier feedback. This is the main DevSecOps idea used here. Developers, testers, operations staff and security staff share responsibility for responding to problems. Git records changes, Jenkins repeats the checks, and SonarCloud makes code issues visible in a dashboard.
 
 Staging is useful because it gives a place to test the application before release. The cloud computing and Infrastructure as Code notes explain how environments can be managed consistently. Monitoring gives feedback after deployment; it is background for this exercise, rather than an extra stage required by the task sheet.
 
 ## Sources
 
-- Supplied task sheet: `SIT753-7.1C.pdf`, pages 2-4 and 8-10.
+- Supplied task sheet: `SIT753-7.1C.pdf`, pages 2-7 and 9-10.
 - Supplied Week 7 screenshots: Jenkins and Git; Cloud Computing; Infrastructure as Code; Monitoring; Introduction to DevSecOps; What is DevSecOps; Application Security Testings in DevSecOps; DevSecOps Tools; DevSecOps and Australia Regulatory.
 - [Jenkins Pipeline syntax](https://www.jenkins.io/doc/book/pipeline/syntax/) - stages, polling and error handling.
 - [SonarQube integration with Jenkins](https://docs.sonarsource.com/sonarqube-server/2026.1/analyzing-source-code/ci-integration/jenkins-integration) - a possible source code analysis tool.
 - [OWASP Dependency-Check Jenkins plugin](https://plugins.jenkins.io/dependency-check-jenkins-plugin/) - a possible dependency scan tool.
 - [npm audit documentation](https://docs.npmjs.com/cli/v11/commands/npm-audit/) - dependency findings and exit codes.
-- [Email Extension plugin](https://plugins.jenkins.io/email-ext/) and [pipeline step reference](https://www.jenkins.io/doc/pipeline/steps/email-ext/) - SMTP settings, messages and log attachments.
 - [Original nodejs-goof repository](https://github.com/snyk-labs/nodejs-goof) - supplied vulnerable application.
-- [Mailpit documentation](https://mailpit.axllent.org/docs/) - local SMTP test inbox and attachments.
 
 Documentation checked on 10 September 2026.
+
+- [SonarScanner CLI](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/scanners/sonarscanner-cli) - official download and SONAR_TOKEN authentication.
+- [SonarCloud Web API](https://docs.sonarsource.com/sonarqube-cloud/advanced-setup/web-api) - authenticated result requests.
+- [Automatic analysis](https://docs.sonarsource.com/sonarqube-cloud/advanced-setup/automatic-analysis) - switch to CI-based analysis for Jenkins.
