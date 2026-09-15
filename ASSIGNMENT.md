@@ -64,6 +64,8 @@ Security checks happen during the pipeline, which gives earlier feedback. This i
 
 Staging is useful because it gives a place to test the application before release. The cloud computing and Infrastructure as Code notes explain how environments can be managed consistently. Monitoring gives feedback after deployment; it is background for this exercise, rather than an extra stage required by the task sheet.
 
+The local Jenkins installation also includes Matrix Project, which the installed Email Extension version needs when attaching the build log.
+
 ## Sources
 
 - Supplied task sheet: `SIT753-7.1C.pdf`, pages 2-4 and 8-10.
@@ -71,9 +73,12 @@ Staging is useful because it gives a place to test the application before releas
 - [Jenkins Pipeline syntax](https://www.jenkins.io/doc/book/pipeline/syntax/) - stages, polling and error handling.
 - [SonarQube integration with Jenkins](https://docs.sonarsource.com/sonarqube-server/2026.1/analyzing-source-code/ci-integration/jenkins-integration) - a possible source code analysis tool.
 - [OWASP Dependency-Check Jenkins plugin](https://plugins.jenkins.io/dependency-check-jenkins-plugin/) - a possible dependency scan tool.
-- [npm audit documentation](https://docs.npmjs.com/cli/v11/commands/npm-audit/) - dependency findings and exit codes.
+- [npm audit documentation](https://docs.npmjs.com/cli/v10/commands/npm-audit/) - dependency findings and exit codes.
 - [Email Extension plugin](https://plugins.jenkins.io/email-ext/) and [pipeline step reference](https://www.jenkins.io/doc/pipeline/steps/email-ext/) - SMTP settings, messages and log attachments.
 - [Original nodejs-goof repository](https://github.com/snyk-labs/nodejs-goof) - supplied vulnerable application.
+- [Apache Maven lifecycle](https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html) - compile, package and test phases.
+- [Ansible documentation](https://docs.ansible.com/projects/ansible/latest/getting_started/index.html) - remote system automation.
+- [Selenium WebDriver](https://www.selenium.dev/documentation/webdriver/) - automated browser checks.
 - [Google app passwords](https://support.google.com/accounts/answer/185833) - Gmail SMTP authentication setup.
 
 Documentation checked on 15 September 2026. The older `Jenkinsfile` is retained from the existing repository; the configured basics job uses `Jenkinsfile.basics`.
