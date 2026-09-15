@@ -12,3 +12,10 @@ npm-debug.log
 .idea/
 .dccache
 
+
+# Jenkins assignment runtime output
+evidence/
+coverage/
+.npm-cache/
+.env
+*.log

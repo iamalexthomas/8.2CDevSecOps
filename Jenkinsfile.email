@@ -1,0 +1,118 @@
+// Part 2 Task 2. The upstream application remains intentionally vulnerable.
+// SMTP credentials belong in Jenkins, never in this repository.
+def runLogged(String command, String name) {
+    int result = sh(script: "${command} > evidence/${name}.log 2>&1", returnStatus: true)
+    sh "cat evidence/${name}.log"
+    writeFile file: "evidence/${name}.exit-code", text: "${result}\n"
+    return result
+}
+
+def reportFailure(int result, String label) {
+    if (result != 0) {
+        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+            error("${label} returned exit code ${result}; continuing the demonstration with the failure recorded.")
+        }
+    }
+}
+
+def notifyStage(String label, String status, String logfile) {
+    emailext(
+        to: params.NOTIFY_EMAIL,
+        subject: "[SIT753] ${env.JOB_NAME} #${env.BUILD_NUMBER} | ${label}: ${status}",
+        body: """Stage: ${label}
+Status: ${status}
+Build: ${env.BUILD_URL}
+Commit: ${env.GIT_COMMIT}
+
+The stage log and Jenkins console output so far are attached.
+A nonzero command exit is reported as FAILURE, including detected vulnerabilities
+or tool/configuration errors. Read the stage log to distinguish these outcomes.
+This is an intentionally vulnerable teaching application.
+""",
+        mimeType: 'text/plain',
+        attachmentsPattern: "evidence/${logfile}.log,evidence/${logfile}.exit-code",
+        attachLog: true,
+        compressLog: false
+    )
+}
+
+pipeline {
+    agent any
+    triggers { pollSCM('* * * * *') }
+    options {
+        skipDefaultCheckout(true)
+        disableConcurrentBuilds()
+        timeout(time: 20, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '15'))
+    }
+    parameters {
+        string(name: 'NOTIFY_EMAIL', defaultValue: env.DEFAULT_NOTIFY_EMAIL ?: '', description: 'Recipient for test and security-scan status and logs; supplied through Jenkins configuration.')
+    }
+    environment {
+        TEST_STATUS = 'NOT RUN'
+        AUDIT_STATUS = 'NOT RUN'
+        NPM_CONFIG_CACHE = "${WORKSPACE}/.npm-cache"
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                deleteDir()
+                git branch: 'main', url: 'https://github.com/iamalexthomas/8.2CDevSecOps.git'
+                sh 'mkdir -p evidence; git rev-parse HEAD > evidence/commit.txt; node --version; npm --version'
+                echo 'Tool: Jenkins Git plugin. Check out the main branch.'
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                echo 'Tool: npm. Install the sample application dependencies.'
+                sh 'npm install'
+            }
+        }
+        stage('Run Tests') {
+            steps {
+                echo 'Tool: npm running the upstream Snyk test script. This is dependency security testing, not a unit-test suite.'
+                script {
+                    int result = runLogged('npm test', 'tests')
+                    env.TEST_STATUS = result == 0 ? 'SUCCESS' : 'FAILURE'
+                    reportFailure(result, 'npm test')
+                }
+            }
+            post {
+                always {
+                    script { notifyStage('Run Tests', env.TEST_STATUS, 'tests') }
+                }
+            }
+        }
+        stage('Generate Coverage Report') {
+            steps {
+                echo 'Tool: npm coverage script (typically Istanbul/nyc). The upstream project currently has no coverage script; retain and report that outcome.'
+                script {
+                    int result = runLogged('npm run coverage', 'coverage')
+                    if (result != 0) {
+                        echo 'Coverage was not generated. Do not interpret this stage as measured test coverage.'
+                    }
+                }
+            }
+        }
+        stage('NPM Audit (Security Scan)') {
+            steps {
+                echo 'Tool: npm audit. Compare installed dependencies with known vulnerability advisories.'
+                script {
+                    int result = runLogged('npm audit', 'npm-audit')
+                    env.AUDIT_STATUS = result == 0 ? 'SUCCESS' : 'FAILURE'
+                    reportFailure(result, 'npm audit')
+                }
+            }
+            post {
+                always {
+                    script { notifyStage('NPM Audit (Security Scan)', env.AUDIT_STATUS, 'npm-audit') }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: 'evidence/*', allowEmptyArchive: true
+        }
+    }
+}

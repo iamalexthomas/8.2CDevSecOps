@@ -1,0 +1,28 @@
+pipeline {
+    agent any
+    triggers { pollSCM('* * * * *') }
+    options { disableConcurrentBuilds() }
+    stages {
+        stage('Build') {
+            steps { echo 'Task: Compile and package the application. Tool: Apache Maven.' }
+        }
+        stage('Unit and Integration Tests') {
+            steps { echo 'Task: Verify individual methods and interactions between components. Tools: JUnit, Maven Surefire and Maven Failsafe.' }
+        }
+        stage('Code Analysis') {
+            steps { echo 'Task: Analyse source code for bugs, maintainability issues and coding-rule violations. Tool: SonarQube with SonarScanner for Jenkins.' }
+        }
+        stage('Security Scan') {
+            steps { echo 'Task: Check third-party dependencies for known vulnerabilities. Tool: OWASP Dependency-Check Jenkins plugin.' }
+        }
+        stage('Deploy to Staging') {
+            steps { echo 'Task: Deploy the packaged application to a staging AWS EC2 instance. Tool: Ansible.' }
+        }
+        stage('Integration Tests on Staging') {
+            steps { echo 'Task: Validate end-to-end workflows in the production-like staging environment. Tool: Selenium WebDriver.' }
+        }
+        stage('Deploy to Production') {
+            steps { echo 'Task: Deploy the tested release to the production AWS EC2 instance. Tool: Ansible.' }
+        }
+    }
+}
