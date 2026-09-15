@@ -19,3 +19,7 @@ coverage/
 .npm-cache/
 .env
 *.log
+
+# Files generated while demonstrating the Jenkins assignment.
+logs/
+.env.*
