@@ -32,7 +32,7 @@ SonarQube can report problems in source code. Dependency-Check looks for known p
 
 The mock and email scripts use `pollSCM('* * * * *')`. Jenkins checks for a new commit every minute. This is polling, so there can be a short delay after a push. A webhook is not needed. A first manual build registers the pipeline trigger. Later demonstrations should show `Started by an SCM change` in the console, with the corresponding new GitHub commit.
 
-Configure each Jenkins job as **Pipeline script from SCM**, using Git, the `main` branch and the relevant script path. The mock uses Jenkins' default SCM checkout to establish polling; its seven authored stages only print messages.
+Configure each Jenkins job as **Pipeline script from SCM**, using Git, the `main` branch and the relevant script path. For the mock job, uncheck **Lightweight checkout**. Jenkins then checks out the repository to read the script before the pipeline starts. The script skips the extra default checkout stage, leaving exactly seven echo-only stages while still recording SCM for polling.
 
 ## Part 1 Task 2: the real scan
 

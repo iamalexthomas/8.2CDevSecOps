@@ -1,7 +1,10 @@
 pipeline {
     agent any
     triggers { pollSCM('* * * * *') }
-    options { disableConcurrentBuilds() }
+    options {
+        skipDefaultCheckout(true)
+        disableConcurrentBuilds()
+    }
     stages {
         stage('Build') {
             steps { echo 'Task: Compile and package the application. Tool: Apache Maven.' }
