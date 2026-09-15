@@ -2,4 +2,4 @@
 
 Change the line below and push it to `main` to demonstrate SCM polling.
 
-Demo revision: 3
+Demo revision: 4
